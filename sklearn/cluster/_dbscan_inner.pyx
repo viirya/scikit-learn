@@ -4,6 +4,7 @@
 
 cimport cython
 from libcpp.vector cimport vector
+from libcpp.map cimport map as cmap
 cimport numpy as np
 import numpy as np
 from scipy import sparse
@@ -37,6 +38,7 @@ def dbscan_inner(np.ndarray[np.uint8_t, ndim=1, mode='c'] is_core,
     cdef np.npy_intp i, label_num = 0, v
     cdef np.ndarray[np.npy_intp, ndim=1] neighb
     cdef vector[np.npy_intp] stack
+    cdef cmap[np.npy_intp, np.npy_intp] push_map
 
     for i in range(labels.shape[0]):
         if mode == 'mem':
@@ -74,7 +76,8 @@ def dbscan_inner(np.ndarray[np.uint8_t, ndim=1, mode='c'] is_core,
 
                     for i in range(neighb.shape[0]):
                         v = neighb[i]
-                        if labels[v] == -1:
+                        if labels[v] == -1 and push_map.count(v) == 0:
+                            push_map[v] = 1
                             push(stack, v)
 
             if stack.size() == 0:
@@ -94,5 +97,7 @@ def dbscan_inner(np.ndarray[np.uint8_t, ndim=1, mode='c'] is_core,
                     is_core[i] = 0
 
             stack.pop_back()
+
+        push_map.clear()
 
         label_num += 1
